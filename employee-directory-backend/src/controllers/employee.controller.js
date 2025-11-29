@@ -1,29 +1,70 @@
 const service = require("../services/employee.service");
 const { employeeSchema } = require("../validations/employee.validation");
 
+// GET all employees
 exports.getEmployees = async (req, res) => {
-  res.json(await service.getAll());
+  try {
+    const employees = await service.getAll();
+    res.json(employees);
+  } catch (err) {
+    res.status(500).json({ message: err.message });
+  }
 };
 
+// GET single employee
 exports.getEmployee = async (req, res) => {
-  res.json(await service.getOne(req.params.id));
+  try {
+    const employee = await service.getOne(req.params.id);
+    if (!employee) return res.status(404).json({ message: "Employee not found" });
+    res.json(employee);
+  } catch (err) {
+    res.status(500).json({ message: err.message });
+  }
 };
 
+// CREATE employee
 exports.createEmployee = async (req, res) => {
-  const { error } = employeeSchema.validate(req.body);
-  if (error) return res.status(400).json(error.details);
+  try {
+    const { error } = employeeSchema.validate(req.body);
+    if (error) return res.status(400).json(error.details);
 
-  res.status(201).json(await service.create(req.body));
+    const newEmployee = await service.create(req.body);
+    res.status(201).json(newEmployee);
+  } catch (err) {
+    res.status(500).json({ message: err.message });
+  }
 };
 
+// UPDATE employee
 exports.updateEmployee = async (req, res) => {
-  const { error } = employeeSchema.validate(req.body);
-  if (error) return res.status(400).json(error.details);
+  try {
+    // Validate (allow unknown to prevent Joi errors)
+    const { error } = employeeSchema.validate(req.body, { allowUnknown: true });
+    if (error) return res.status(400).json(error.details);
 
-  res.json(await service.update(req.params.id, req.body));
+    // Remove protected fields
+    const updateData = { ...req.body };
+    ["_id", "createdAt", "updatedAt", "__v"].forEach(field => delete updateData[field]);
+
+    // Update in DB
+    const updatedEmployee = await service.update(req.params.id, updateData);
+
+    if (!updatedEmployee)
+      return res.status(404).json({ message: "Employee not found" });
+
+    res.json(updatedEmployee);
+  } catch (err) {
+    res.status(500).json({ message: err.message });
+  }
 };
 
+// DELETE employee
 exports.deleteEmployee = async (req, res) => {
-  await service.delete(req.params.id);
-  res.json({ message: "Employee deleted" });
+  try {
+    const deleted = await service.delete(req.params.id);
+    if (!deleted) return res.status(404).json({ message: "Employee not found" });
+    res.json({ message: "Employee deleted" });
+  } catch (err) {
+    res.status(500).json({ message: err.message });
+  }
 };

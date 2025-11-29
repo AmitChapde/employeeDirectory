@@ -7,4 +7,6 @@ exports.employeeSchema = Joi.object({
   contact: Joi.string().required(),
   age: Joi.number().min(18).required(),
   joiningDate: Joi.date().required()
-});
+}).unknown(true);   
+
+    
